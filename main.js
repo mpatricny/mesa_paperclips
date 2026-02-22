@@ -2540,34 +2540,34 @@ function calculateCreativity(number){
 }
 
 function resetPrestige(){
-    
+
     prestigeU = 0;
     prestigeS = 0;
-    
-    localStorage.removeItem("savePrestige");
-    
+
+    mesaRemove("savePrestige");
+
 }
 
 function cheatPrestigeU(){
-    
+
         prestigeU++;
         var savePrestige = {
         prestigeU: prestigeU,
         prestigeS: prestigeS,
         }
-        localStorage.setItem("savePrestige",JSON.stringify(savePrestige));
-    
+        mesaSave("savePrestige",JSON.stringify(savePrestige));
+
 }
 
 function cheatPrestigeS(){
-    
+
         prestigeS++;
         var savePrestige = {
         prestigeU: prestigeU,
         prestigeS: prestigeS,
         }
-        localStorage.setItem("savePrestige",JSON.stringify(savePrestige));
-    
+        mesaSave("savePrestige",JSON.stringify(savePrestige));
+
 }
 
 function setB(){
@@ -3224,23 +3224,62 @@ function processMatter(){
     }
 
 
-// CHECK FOR SAVES
+// MESA SDK HELPERS
 
-if (localStorage.getItem("saveGame") != null) {
-    load();
+var TICK_MS = 10;
+
+async function mesaSave(key, value) {
+    localStorage.setItem(key, value);
+    if (window.Mesa) {
+        await window.Mesa.data.setItem(key, value);
+    }
 }
-    
-if (localStorage.getItem("savePrestige") != null) {
-    loadPrestige();
-    refresh();
+
+async function mesaLoad(key) {
+    if (window.Mesa) {
+        var val = await window.Mesa.data.getItem(key);
+        if (val !== null && !val.error) return val;
+    }
+    return localStorage.getItem(key);
 }
+
+async function mesaRemove(key) {
+    localStorage.removeItem(key);
+    if (window.Mesa) {
+        await window.Mesa.data.removeItem(key);
+    }
+}
+
+// MESA SDK INIT + CHECK FOR SAVES
+
+(async function() {
+    if (window.Mesa) {
+        await window.Mesa.init();
+        window.Mesa.game.loadingEnd();
+    }
+
+    var savedGame = await mesaLoad("saveGame");
+    if (savedGame != null) {
+        load();
+    }
+
+    if (localStorage.getItem("savePrestige") != null) {
+        loadPrestige();
+        refresh();
+    }
+
+    if (window.Mesa) {
+        window.Mesa.game.gameplayStart();
+    }
+})();
 
 
 // MAIN LOOP
 
 window.setInterval(function(){
- 
+
     ticks = ticks + 1;
+    elapsedTime++;
     milestoneCheck();
     buttonUpdate();
     
@@ -3574,6 +3613,27 @@ if (dismantle >= 7) {
     if (endTimer6>=600 && milestoneFlag == 16) {
         displayMessage("a game by Frank Lantz");
         milestoneFlag++;
+
+        // Submit leaderboard score at endgame
+        if (window.Mesa && window.Mesa.user.isLoggedIn()) {
+            var totalSeconds = Math.floor(elapsedTime * TICK_MS / 1000);
+            var days = Math.floor(totalSeconds / 86400);
+            var hours = Math.floor((totalSeconds % 86400) / 3600);
+            var mins = Math.floor((totalSeconds % 3600) / 60);
+            var timeStr = days > 0
+                ? days + "d " + String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0")
+                : String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0");
+
+            var displayValue = "30 septillion (" + timeStr + ")";
+            var sortValue = 3000000 - totalSeconds;
+
+            window.Mesa.leaderboard.submit({
+                key: 'default',
+                playerName: window.Mesa.user.get().username,
+                displayValue: displayValue,
+                sortValue: sortValue
+            });
+        }
     }
     
     if (endTimer6>=700 && milestoneFlag == 17) {
@@ -3589,6 +3649,9 @@ if (dismantle >= 7) {
     if (endTimer6>=900 && milestoneFlag == 19) {
         displayMessage("&#169; 2017 Everybody House Games");
         milestoneFlag++;
+        if (window.Mesa) {
+            window.Mesa.game.gameplayStop();
+        }
     }
     
     
@@ -4023,12 +4086,12 @@ for(var i=0; i < activeProjects.length; i++){
     
         }
     
-    localStorage.setItem("saveGame",JSON.stringify(saveGame));
-    localStorage.setItem("saveProjectsUses",JSON.stringify(projectsUses));
-    localStorage.setItem("saveProjectsFlags",JSON.stringify(projectsFlags));
-    localStorage.setItem("saveProjectsActive",JSON.stringify(projectsActive));
-    localStorage.setItem("saveStratsActive",JSON.stringify(stratsActive));
-    
+    mesaSave("saveGame",JSON.stringify(saveGame));
+    mesaSave("saveProjectsUses",JSON.stringify(projectsUses));
+    mesaSave("saveProjectsFlags",JSON.stringify(projectsFlags));
+    mesaSave("saveProjectsActive",JSON.stringify(projectsActive));
+    mesaSave("saveStratsActive",JSON.stringify(stratsActive));
+
 }
 
 function save1() {
@@ -4312,11 +4375,11 @@ for(var i=0; i < activeProjects.length; i++){
     
         }
     
-    localStorage.setItem("saveGame1",JSON.stringify(saveGame));
-    localStorage.setItem("saveProjectsUses1",JSON.stringify(projectsUses));
-    localStorage.setItem("saveProjectsFlags1",JSON.stringify(projectsFlags));
-    localStorage.setItem("saveProjectsActive1",JSON.stringify(projectsActive));
-    localStorage.setItem("saveStratsActive1",JSON.stringify(stratsActive));
+    mesaSave("saveGame1",JSON.stringify(saveGame));
+    mesaSave("saveProjectsUses1",JSON.stringify(projectsUses));
+    mesaSave("saveProjectsFlags1",JSON.stringify(projectsFlags));
+    mesaSave("saveProjectsActive1",JSON.stringify(projectsActive));
+    mesaSave("saveStratsActive1",JSON.stringify(stratsActive));
     
 }
 
@@ -4601,11 +4664,11 @@ for(var i=0; i < activeProjects.length; i++){
     
         }
     
-    localStorage.setItem("saveGame2",JSON.stringify(saveGame));
-    localStorage.setItem("saveProjectsUses2",JSON.stringify(projectsUses));
-    localStorage.setItem("saveProjectsFlags2",JSON.stringify(projectsFlags));
-    localStorage.setItem("saveProjectsActive2",JSON.stringify(projectsActive));
-    localStorage.setItem("saveStratsActive2",JSON.stringify(stratsActive));
+    mesaSave("saveGame2",JSON.stringify(saveGame));
+    mesaSave("saveProjectsUses2",JSON.stringify(projectsUses));
+    mesaSave("saveProjectsFlags2",JSON.stringify(projectsFlags));
+    mesaSave("saveProjectsActive2",JSON.stringify(projectsActive));
+    mesaSave("saveStratsActive2",JSON.stringify(stratsActive));
     
 }
 
@@ -5529,12 +5592,17 @@ function load2() {
 }
 
 function reset() {
-    localStorage.removeItem("saveGame");
-    localStorage.removeItem("saveProjectsUses");
-    localStorage.removeItem("saveProjectsFlags");
-    localStorage.removeItem("saveProjectsActive");
-    localStorage.removeItem("saveStratsActive");
+    mesaRemove("saveGame");
+    mesaRemove("saveProjectsUses");
+    mesaRemove("saveProjectsFlags");
+    mesaRemove("saveProjectsActive");
+    mesaRemove("saveStratsActive");
     location.reload();
+}
+
+function fullReset() {
+    mesaRemove("savePrestige");
+    reset();
 }
 
 function loadPrestige() {

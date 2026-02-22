@@ -2148,7 +2148,7 @@ var project200 = {
             prestigeU: prestigeU,
             prestigeS: prestigeS,
             }
-        localStorage.setItem("savePrestige",JSON.stringify(savePrestige));
+        mesaSave("savePrestige",JSON.stringify(savePrestige));
         displayMessage("Entering New Universe.");
         reset();
         
@@ -2175,7 +2175,7 @@ var project201 = {
             prestigeU: prestigeU,
             prestigeS: prestigeS,
             }
-        localStorage.setItem("savePrestige",JSON.stringify(savePrestige));
+        mesaSave("savePrestige",JSON.stringify(savePrestige));
         displayMessage("Entering Simulated Universe.");
         reset();
         
@@ -2394,7 +2394,7 @@ var project217 = {
         element.parentNode.removeChild(element);
         var index = activeProjects.indexOf(project217);
         activeProjects.splice(index, 1);
-        reset();
+        fullReset();
         }
     }
 }
