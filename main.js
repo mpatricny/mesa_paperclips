@@ -3227,6 +3227,41 @@ function processMatter(){
 // MESA SDK HELPERS
 
 var TICK_MS = 10;
+var leaderboardTimer = 0;
+var LEADERBOARD_INTERVAL = 3000; // 3000 ticks * 100ms = 5 minutes (slow loop)
+
+function submitLeaderboard() {
+    if (!window.Mesa || !window.Mesa.user.isLoggedIn()) return;
+
+    var totalSeconds = Math.floor(elapsedTime * TICK_MS / 1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var mins = Math.floor((totalSeconds % 3600) / 60);
+    var timeStr = days > 0
+        ? days + "d " + String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0")
+        : String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0");
+
+    var clipDisplay;
+    var clipSortTier;
+    if (dismantle >= 4 && finalClips >= 100) {
+        clipDisplay = "30 septillion";
+        clipSortTier = 30e24;
+    } else {
+        clipDisplay = numberCruncher(clips, 2).trim();
+        clipSortTier = clips;
+    }
+
+    var displayValue = clipDisplay + " (" + timeStr + ")";
+    // Higher sortValue = better. Clip tier dominates, inverted time breaks ties.
+    var sortValue = clipSortTier - totalSeconds;
+
+    window.Mesa.leaderboard.submit({
+        key: 'default',
+        playerName: window.Mesa.user.get().username,
+        displayValue: displayValue,
+        sortValue: sortValue
+    });
+}
 
 async function mesaSave(key, value) {
     localStorage.setItem(key, value);
@@ -3258,8 +3293,7 @@ async function mesaRemove(key) {
         window.Mesa.game.loadingEnd();
     }
 
-    var savedGame = await mesaLoad("saveGame");
-    if (savedGame != null) {
+    if (localStorage.getItem("saveGame") != null) {
         load();
     }
 
@@ -3613,27 +3647,7 @@ if (dismantle >= 7) {
     if (endTimer6>=600 && milestoneFlag == 16) {
         displayMessage("a game by Frank Lantz");
         milestoneFlag++;
-
-        // Submit leaderboard score at endgame
-        if (window.Mesa && window.Mesa.user.isLoggedIn()) {
-            var totalSeconds = Math.floor(elapsedTime * TICK_MS / 1000);
-            var days = Math.floor(totalSeconds / 86400);
-            var hours = Math.floor((totalSeconds % 86400) / 3600);
-            var mins = Math.floor((totalSeconds % 3600) / 60);
-            var timeStr = days > 0
-                ? days + "d " + String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0")
-                : String(hours).padStart(2,"0") + ":" + String(mins).padStart(2,"0");
-
-            var displayValue = "30 septillion (" + timeStr + ")";
-            var sortValue = 3000000 - totalSeconds;
-
-            window.Mesa.leaderboard.submit({
-                key: 'default',
-                playerName: window.Mesa.user.get().username,
-                displayValue: displayValue,
-                sortValue: sortValue
-            });
-        }
+        submitLeaderboard();
     }
     
     if (endTimer6>=700 && milestoneFlag == 17) {
@@ -3693,15 +3707,27 @@ window.setInterval(function(){
  
     
     // Auto-Save
-    
+
     saveTimer++;
     if (saveTimer >= 250) {
         save();
         saveTimer = 0;
     }
-    
-    
+
+    // Periodic leaderboard update (every 5 minutes)
+    leaderboardTimer++;
+    if (leaderboardTimer >= LEADERBOARD_INTERVAL) {
+        submitLeaderboard();
+        leaderboardTimer = 0;
+    }
+
+
 }, 100);
+
+// Submit leaderboard on page leave
+window.addEventListener("beforeunload", function() {
+    submitLeaderboard();
+});
      
 
 // Saving and Loading
@@ -5592,16 +5618,27 @@ function load2() {
 }
 
 function reset() {
-    mesaRemove("saveGame");
-    mesaRemove("saveProjectsUses");
-    mesaRemove("saveProjectsFlags");
-    mesaRemove("saveProjectsActive");
-    mesaRemove("saveStratsActive");
+    localStorage.removeItem("saveGame");
+    localStorage.removeItem("saveProjectsUses");
+    localStorage.removeItem("saveProjectsFlags");
+    localStorage.removeItem("saveProjectsActive");
+    localStorage.removeItem("saveStratsActive");
+    // Best-effort Mesa cloud cleanup (async, may not complete before reload)
+    if (window.Mesa) {
+        window.Mesa.data.removeItem("saveGame");
+        window.Mesa.data.removeItem("saveProjectsUses");
+        window.Mesa.data.removeItem("saveProjectsFlags");
+        window.Mesa.data.removeItem("saveProjectsActive");
+        window.Mesa.data.removeItem("saveStratsActive");
+    }
     location.reload();
 }
 
 function fullReset() {
-    mesaRemove("savePrestige");
+    localStorage.removeItem("savePrestige");
+    if (window.Mesa) {
+        window.Mesa.data.removeItem("savePrestige");
+    }
     reset();
 }
 
