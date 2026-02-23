@@ -3286,15 +3286,38 @@ async function mesaRemove(key) {
 }
 
 // CHECK FOR SAVES (synchronous — must run before main loop)
-// Version guard: clear saves from old versions that lacked Mesa SDK
-var SAVE_VERSION = 2;
-if (localStorage.getItem("saveVersion") != SAVE_VERSION) {
+// Version guard: clear saves from old/incompatible versions
+var SAVE_VERSION = "3";
+if (localStorage.getItem("saveVersion") !== SAVE_VERSION) {
+    // Clear standard save keys
     localStorage.removeItem("saveGame");
     localStorage.removeItem("saveProjectsUses");
     localStorage.removeItem("saveProjectsFlags");
     localStorage.removeItem("saveProjectsActive");
     localStorage.removeItem("saveStratsActive");
     localStorage.removeItem("savePrestige");
+    // Clear save slot keys
+    localStorage.removeItem("saveGame1");
+    localStorage.removeItem("saveProjectsUses1");
+    localStorage.removeItem("saveProjectsFlags1");
+    localStorage.removeItem("saveProjectsActive1");
+    localStorage.removeItem("saveStratsActive1");
+    localStorage.removeItem("saveGame2");
+    localStorage.removeItem("saveProjectsUses2");
+    localStorage.removeItem("saveProjectsFlags2");
+    localStorage.removeItem("saveProjectsActive2");
+    localStorage.removeItem("saveStratsActive2");
+    // Clear Mesa local-mode mirror keys
+    var keysToRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf("mesa_local_") === 0) {
+            keysToRemove.push(k);
+        }
+    }
+    for (var i = 0; i < keysToRemove.length; i++) {
+        localStorage.removeItem(keysToRemove[i]);
+    }
     localStorage.setItem("saveVersion", SAVE_VERSION);
 }
 
