@@ -3285,24 +3285,34 @@ async function mesaRemove(key) {
     }
 }
 
-// MESA SDK INIT + CHECK FOR SAVES
+// CHECK FOR SAVES (synchronous — must run before main loop)
+// Version guard: clear saves from old versions that lacked Mesa SDK
+var SAVE_VERSION = 2;
+if (localStorage.getItem("saveVersion") != SAVE_VERSION) {
+    localStorage.removeItem("saveGame");
+    localStorage.removeItem("saveProjectsUses");
+    localStorage.removeItem("saveProjectsFlags");
+    localStorage.removeItem("saveProjectsActive");
+    localStorage.removeItem("saveStratsActive");
+    localStorage.removeItem("savePrestige");
+    localStorage.setItem("saveVersion", SAVE_VERSION);
+}
+
+if (localStorage.getItem("saveGame") != null) {
+    load();
+}
+
+if (localStorage.getItem("savePrestige") != null) {
+    loadPrestige();
+    refresh();
+}
+
+// MESA SDK INIT (async — safe to run after save check)
 
 (async function() {
     if (window.Mesa) {
         await window.Mesa.init();
         window.Mesa.game.loadingEnd();
-    }
-
-    if (localStorage.getItem("saveGame") != null) {
-        load();
-    }
-
-    if (localStorage.getItem("savePrestige") != null) {
-        loadPrestige();
-        refresh();
-    }
-
-    if (window.Mesa) {
         window.Mesa.game.gameplayStart();
     }
 })();
@@ -4117,6 +4127,7 @@ for(var i=0; i < activeProjects.length; i++){
     mesaSave("saveProjectsFlags",JSON.stringify(projectsFlags));
     mesaSave("saveProjectsActive",JSON.stringify(projectsActive));
     mesaSave("saveStratsActive",JSON.stringify(stratsActive));
+    localStorage.setItem("saveVersion", SAVE_VERSION);
 
 }
 
